@@ -8,28 +8,36 @@
         win.margins = 15;
 
         // --- 1. Controls ---
-        var ctrlPnl = win.add("panel", undefined, "Controls");
+        var ctrlPnl = win.add("panel", undefined, "Settings");
         ctrlPnl.orientation = "row";
         ctrlPnl.alignment = ["fill", "top"];
+        ctrlPnl.spacing = 10;
+
         var btnSetup = ctrlPnl.add("button", undefined, "Setup Render");
         var btnLoad = ctrlPnl.add("button", undefined, "Load JSON");
 
-        // --- 2. Font Zoom ---
-        var zoomGrp = win.add("group");
-        zoomGrp.alignment = ["fill", "top"];
-        zoomGrp.add("statictext", undefined, "Text Zoom:");
-        var zoomSlider = zoomGrp.add("slider", undefined, 20, 15, 80);
-        var zoomVal = zoomGrp.add("statictext", undefined, "20px");
+        ctrlPnl.add("statictext", undefined, "Model:");
+        var modelDropdown = ctrlPnl.add("dropdownlist", undefined, ["tiny", "base", "small", "medium", "large"]);
+        modelDropdown.selection = 1; // Default to 'base'
+
+        // --- 2. Font Settings ---
+        var fontGrp = win.add("group");
+        fontGrp.alignment = ["fill", "top"];
+        fontGrp.add("statictext", undefined, "Font Size:");
+        var zoomInput = fontGrp.add("edittext", undefined, "20");
+        zoomInput.preferredSize.width = 50;
+        fontGrp.add("statictext", undefined, "px");
 
         // --- 3. The Editor Container ---
         var headerGrp = win.add("group");
         headerGrp.orientation = "row";
         headerGrp.alignment = ["fill", "top"];
         headerGrp.spacing = 5;
-        var h1 = headerGrp.add("statictext", [0,0,80,20], "From");
-        var h2 = headerGrp.add("statictext", [0,0,80,20], "To");
-        var h3 = headerGrp.add("statictext", [0,0,80,20], "Duration");
         var h4 = headerGrp.add("statictext", undefined, "Transcript Text");
+        h4.preferredSize.width = 300;
+        var h1 = headerGrp.add("statictext", [0,0,60,20], "From");
+        var h2 = headerGrp.add("statictext", [0,0,60,20], "To");
+        var h3 = headerGrp.add("statictext", [0,0,60,20], "Duration");
 
         var editorGroup = win.add("group");
         editorGroup.orientation = "row";
@@ -40,13 +48,11 @@
         var fromEditor, toEditor, durEditor, txtEditor;
 
         function createEditors(fontSize, content) {
-            // Remove old ones if they exist
             if (fromEditor) editorGroup.remove(fromEditor);
             if (toEditor) editorGroup.remove(toEditor);
             if (durEditor) editorGroup.remove(durEditor);
             if (txtEditor) editorGroup.remove(txtEditor);
 
-            // Use a fallback for font creation
             var fontObj;
             try {
                 fontObj = ScriptUI.newFont("Tahoma", "REGULAR", fontSize);
@@ -54,29 +60,29 @@
                 fontObj = ScriptUI.newFont("Arial", "REGULAR", fontSize);
             }
 
-            fromEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
-            if (fontObj) { fromEditor.graphics.font = fontObj; fromEditor.font = fontObj; }
-            fromEditor.preferredSize.width = 80;
-            fromEditor.minimumSize.width = 50;
-            fromEditor.alignment = ["left", "fill"];
-
-            toEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
-            if (fontObj) { toEditor.graphics.font = fontObj; toEditor.font = fontObj; }
-            toEditor.preferredSize.width = 80;
-            toEditor.minimumSize.width = 50;
-            toEditor.alignment = ["left", "fill"];
-
-            durEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
-            if (fontObj) { durEditor.graphics.font = fontObj; durEditor.font = fontObj; }
-            durEditor.preferredSize.width = 80;
-            durEditor.minimumSize.width = 50;
-            durEditor.alignment = ["left", "fill"];
-
+            // Transcript Text on the LEFT
             txtEditor = editorGroup.add("edittext", undefined, content || "", {multiline: true, scrolling: true});
             if (fontObj) { txtEditor.graphics.font = fontObj; txtEditor.font = fontObj; }
             txtEditor.alignment = ["fill", "fill"];
-            txtEditor.preferredSize.width = 350;
+            txtEditor.preferredSize.width = 300;
+            txtEditor.preferredSize.height = 300; // Reduced height to keep buttons visible
             txtEditor.onChanging = updateTimings;
+
+            // Timings on the RIGHT
+            fromEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
+            if (fontObj) { fromEditor.graphics.font = fontObj; fromEditor.font = fontObj; }
+            fromEditor.preferredSize.width = 60;
+            fromEditor.alignment = ["right", "fill"];
+
+            toEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
+            if (fontObj) { toEditor.graphics.font = fontObj; toEditor.font = fontObj; }
+            toEditor.preferredSize.width = 60;
+            toEditor.alignment = ["right", "fill"];
+
+            durEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
+            if (fontObj) { durEditor.graphics.font = fontObj; durEditor.font = fontObj; }
+            durEditor.preferredSize.width = 60;
+            durEditor.alignment = ["right", "fill"];
 
             win.layout.layout(true);
         }
@@ -134,17 +140,12 @@
             durEditor.text = durLines.join("\n");
         }
 
-        // --- وظيفة تحديث الخط الإجبارية ---
+        // --- وظيفة تحديث الخط ---
         function forceFontUpdate() {
-            var newSize = Math.round(zoomSlider.value);
-            zoomVal.text = newSize + "px";
+            var newSize = parseInt(zoomInput.text, 10);
+            if (isNaN(newSize) || newSize <= 0) newSize = 20;
             var savedText = txtEditor.text;
 
-            // Try to save selection if possible
-            var sel = null;
-            try { sel = txtEditor.selection; } catch(e) {}
-
-            // Force application to window graphics as well
             try {
                 var f = ScriptUI.newFont("Tahoma", "REGULAR", newSize);
                 win.graphics.font = f;
@@ -153,17 +154,12 @@
             createEditors(newSize, savedText);
             updateTimings();
 
-            // Try to restore selection/focus
             try {
                 txtEditor.active = true;
-                if (sel) txtEditor.selection = sel;
             } catch(e) {}
         }
 
-        zoomSlider.onChanging = function() {
-            zoomVal.text = Math.round(this.value) + "px";
-        };
-        zoomSlider.onChange = forceFontUpdate;
+        zoomInput.onChange = forceFontUpdate;
 
         // --- Logic Functions ---
         function loadData(file) {
@@ -199,12 +195,13 @@
         };
 
         btnRun.onClick = function() {
-            statusLbl.text = "Processing AI...";
-            var py = "python \"" + whisperDir + "run_whisper.py\" \"" + whisperDir + "WhisRend.wav\" base ar";
+            var selectedModel = modelDropdown.selection.text;
+            statusLbl.text = "Processing AI (" + selectedModel + ")...";
+            var py = "python \"" + whisperDir + "run_whisper.py\" \"" + whisperDir + "WhisRend.wav\" " + selectedModel + " ar";
             system.callSystem("cmd.exe /c \"" + py + "\"");
             var f = new File(whisperDir + "WhisRend.json");
             if (f.exists) loadData(f);
-            statusLbl.text = "AI Done!";
+            statusLbl.text = "AI Done (" + selectedModel + ")!";
         };
 
         btnApply.onClick = function() {
