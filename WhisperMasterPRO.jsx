@@ -22,23 +22,66 @@
         var zoomVal = zoomGrp.add("statictext", undefined, "20px");
 
         // --- 3. The Editor Container ---
+        var headerGrp = win.add("group");
+        headerGrp.orientation = "row";
+        headerGrp.alignment = ["fill", "top"];
+        headerGrp.spacing = 5;
+        var h1 = headerGrp.add("statictext", [0,0,80,20], "From");
+        var h2 = headerGrp.add("statictext", [0,0,80,20], "To");
+        var h3 = headerGrp.add("statictext", [0,0,80,20], "Duration");
+        var h4 = headerGrp.add("statictext", undefined, "Transcript Text");
+
         var editorGroup = win.add("group");
         editorGroup.orientation = "row";
         editorGroup.alignChildren = ["fill", "fill"];
         editorGroup.alignment = ["fill", "fill"];
+        editorGroup.spacing = 5;
 
-        // صندوق التوقيت (يسار)
-        var timeEditor = editorGroup.add("edittext", undefined, "From | To | Dur", {multiline: true, scrolling: false, readonly: true});
-        timeEditor.graphics.font = ScriptUI.newFont("Tahoma", "Regular", 20);
-        timeEditor.preferredSize.width = 180;
-        timeEditor.alignment = ["left", "fill"];
+        var fromEditor, toEditor, durEditor, txtEditor;
 
-        // صندوق النصوص (يمين)
-        var txtEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: true});
-        txtEditor.graphics.font = ScriptUI.newFont("Tahoma", "Regular", 20);
-        txtEditor.alignment = ["fill", "fill"];
-        txtEditor.preferredSize.width = 400;
-        txtEditor.preferredSize.height = 350;
+        function createEditors(fontSize, content) {
+            // Remove old ones if they exist
+            if (fromEditor) editorGroup.remove(fromEditor);
+            if (toEditor) editorGroup.remove(toEditor);
+            if (durEditor) editorGroup.remove(durEditor);
+            if (txtEditor) editorGroup.remove(txtEditor);
+
+            // Use a fallback for font creation
+            var fontObj;
+            try {
+                fontObj = ScriptUI.newFont("Tahoma", "REGULAR", fontSize);
+            } catch (e) {
+                fontObj = ScriptUI.newFont("Arial", "REGULAR", fontSize);
+            }
+
+            fromEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
+            if (fontObj) { fromEditor.graphics.font = fontObj; fromEditor.font = fontObj; }
+            fromEditor.preferredSize.width = 80;
+            fromEditor.minimumSize.width = 50;
+            fromEditor.alignment = ["left", "fill"];
+
+            toEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
+            if (fontObj) { toEditor.graphics.font = fontObj; toEditor.font = fontObj; }
+            toEditor.preferredSize.width = 80;
+            toEditor.minimumSize.width = 50;
+            toEditor.alignment = ["left", "fill"];
+
+            durEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
+            if (fontObj) { durEditor.graphics.font = fontObj; durEditor.font = fontObj; }
+            durEditor.preferredSize.width = 80;
+            durEditor.minimumSize.width = 50;
+            durEditor.alignment = ["left", "fill"];
+
+            txtEditor = editorGroup.add("edittext", undefined, content || "", {multiline: true, scrolling: true});
+            if (fontObj) { txtEditor.graphics.font = fontObj; txtEditor.font = fontObj; }
+            txtEditor.alignment = ["fill", "fill"];
+            txtEditor.preferredSize.width = 350;
+            txtEditor.onChanging = updateTimings;
+
+            win.layout.layout(true);
+        }
+
+        createEditors(20, "");
 
         var statusLbl = win.add("statictext", undefined, "Status: Ready");
         statusLbl.alignment = ["fill", "bottom"];
@@ -56,20 +99,22 @@
         // --- وظيفة تحديث التوقيتات ---
         function updateTimings() {
             if (globalWordData.length === 0) return;
-            var lines = txtEditor.text.split("\n");
-            var timeLines = [];
+            var lines = txtEditor.text.split(/[\r\n]/);
+            var fromLines = [], toLines = [], durLines = [];
             var wordIdx = 0;
 
             for (var i = 0; i < lines.length; i++) {
                 var lineText = lines[i].replace(/^\s+|\s+$/g, "");
                 if (lineText === "") {
-                    timeLines.push("-");
+                    fromLines.push("");
+                    toLines.push("");
+                    durLines.push("");
                     continue;
                 }
 
                 var wordsInLine = lineText.split(/\s+/).length;
                 if (wordIdx >= globalWordData.length) {
-                    timeLines.push("No Data");
+                    fromLines.push("-"); toLines.push("-"); durLines.push("-");
                     continue;
                 }
 
@@ -78,13 +123,16 @@
                 var end = globalWordData[endIdx].end;
                 var duration = end - start;
 
-                timeLines.push(start.toFixed(1) + " | " + end.toFixed(1) + " | " + duration.toFixed(1));
+                fromLines.push(start.toFixed(1));
+                toLines.push(end.toFixed(1));
+                durLines.push(duration.toFixed(1));
+
                 wordIdx += wordsInLine;
             }
-            timeEditor.text = timeLines.join("\n");
+            fromEditor.text = fromLines.join("\n");
+            toEditor.text = toLines.join("\n");
+            durEditor.text = durLines.join("\n");
         }
-
-        txtEditor.onChanging = updateTimings;
 
         // --- وظيفة تحديث الخط الإجبارية ---
         function forceFontUpdate() {
@@ -92,27 +140,29 @@
             zoomVal.text = newSize + "px";
             var savedText = txtEditor.text;
 
-            // حذف وإعادة بناء الصناديق لتجاوز قيود النظام في حجم الخط
-            editorGroup.remove(timeEditor);
-            editorGroup.remove(txtEditor);
+            // Try to save selection if possible
+            var sel = null;
+            try { sel = txtEditor.selection; } catch(e) {}
 
-            timeEditor = editorGroup.add("edittext", undefined, "", {multiline: true, scrolling: false, readonly: true});
-            timeEditor.graphics.font = ScriptUI.newFont("Tahoma", "Regular", newSize);
-            timeEditor.preferredSize.width = 180;
-            timeEditor.alignment = ["left", "fill"];
+            // Force application to window graphics as well
+            try {
+                var f = ScriptUI.newFont("Tahoma", "REGULAR", newSize);
+                win.graphics.font = f;
+            } catch(e) {}
 
-            txtEditor = editorGroup.add("edittext", undefined, savedText, {multiline: true, scrolling: true});
-            txtEditor.graphics.font = ScriptUI.newFont("Tahoma", "Regular", newSize);
-            txtEditor.alignment = ["fill", "fill"];
-            txtEditor.preferredSize.width = 400;
-            txtEditor.preferredSize.height = 350;
-            txtEditor.onChanging = updateTimings;
-
+            createEditors(newSize, savedText);
             updateTimings();
-            win.layout.layout(true);
+
+            // Try to restore selection/focus
+            try {
+                txtEditor.active = true;
+                if (sel) txtEditor.selection = sel;
+            } catch(e) {}
         }
 
-        zoomSlider.onChanging = forceFontUpdate;
+        zoomSlider.onChanging = function() {
+            zoomVal.text = Math.round(this.value) + "px";
+        };
         zoomSlider.onChange = forceFontUpdate;
 
         // --- Logic Functions ---
@@ -178,7 +228,7 @@
         };
 
         win.onResizing = win.onResize = function() {
-            this.layout.resize();
+            this.layout.layout(true);
         };
 
         win.layout.layout(true);
