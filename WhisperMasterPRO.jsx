@@ -7,39 +7,50 @@
         win.spacing = 10;
         win.margins = 15;
 
-        // --- 1. Controls ---
-        var ctrlPnl = win.add("panel", undefined, "Settings");
-        ctrlPnl.orientation = "row";
-        ctrlPnl.alignment = ["fill", "top"];
-        ctrlPnl.spacing = 10;
+        var tpanel = win.add("tabbedpanel");
+        tpanel.alignment = ["fill", "fill"];
 
-        var btnSetup = ctrlPnl.add("button", undefined, "Setup Render");
-        var btnLoad = ctrlPnl.add("button", undefined, "Load JSON");
+        // ==========================================
+        // --- Tab 1: AI & Editor ---
+        // ==========================================
+        var tabEditor = tpanel.add("tab", undefined, "1. AI & Editor");
+        tabEditor.orientation = "column";
+        tabEditor.alignChildren = ["fill", "fill"];
+        tabEditor.spacing = 10;
 
-        ctrlPnl.add("statictext", undefined, "Model:");
-        var modelDropdown = ctrlPnl.add("dropdownlist", undefined, ["tiny", "base", "small", "medium", "large"]);
+        // --- 1. Settings Area ---
+        var settingsGrp = tabEditor.add("group");
+        settingsGrp.orientation = "row";
+        settingsGrp.alignment = ["fill", "top"];
+        settingsGrp.spacing = 10;
+
+        var btnSetup = settingsGrp.add("button", undefined, "Setup Render");
+        var btnLoad = settingsGrp.add("button", undefined, "Load JSON");
+
+        settingsGrp.add("statictext", undefined, "Model:");
+        var modelDropdown = settingsGrp.add("dropdownlist", undefined, ["tiny", "base", "small", "medium", "large"]);
         modelDropdown.selection = 1; // Default to 'base'
 
-        // --- 2. Font Settings ---
-        var fontGrp = win.add("group");
+        // --- 2. Editor Font Settings ---
+        var fontGrp = tabEditor.add("group");
         fontGrp.alignment = ["fill", "top"];
-        fontGrp.add("statictext", undefined, "Font Size:");
+        fontGrp.add("statictext", undefined, "UI Font Size:");
         var zoomInput = fontGrp.add("edittext", undefined, "20");
-        zoomInput.preferredSize.width = 50;
+        zoomInput.preferredSize.width = 40;
         fontGrp.add("statictext", undefined, "px");
 
         // --- 3. The Editor Container ---
-        var headerGrp = win.add("group");
+        var headerGrp = tabEditor.add("group");
         headerGrp.orientation = "row";
         headerGrp.alignment = ["fill", "top"];
         headerGrp.spacing = 5;
-        var h4 = headerGrp.add("statictext", undefined, "Transcript Text");
-        h4.preferredSize.width = 300;
+        var hTitle = headerGrp.add("statictext", undefined, "Transcript Text");
+        hTitle.preferredSize.width = 300;
         var h1 = headerGrp.add("statictext", [0,0,60,20], "From");
         var h2 = headerGrp.add("statictext", [0,0,60,20], "To");
         var h3 = headerGrp.add("statictext", [0,0,60,20], "Duration");
 
-        var editorGroup = win.add("group");
+        var editorGroup = tabEditor.add("group");
         editorGroup.orientation = "row";
         editorGroup.alignChildren = ["fill", "fill"];
         editorGroup.alignment = ["fill", "fill"];
@@ -65,7 +76,7 @@
             if (fontObj) { txtEditor.graphics.font = fontObj; txtEditor.font = fontObj; }
             txtEditor.alignment = ["fill", "fill"];
             txtEditor.preferredSize.width = 300;
-            txtEditor.preferredSize.height = 300; // Reduced height to keep buttons visible
+            txtEditor.preferredSize.height = 250;
             txtEditor.onChanging = updateTimings;
 
             // Timings on the RIGHT
@@ -87,22 +98,53 @@
             win.layout.layout(true);
         }
 
-        createEditors(20, "");
+        // ==========================================
+        // --- Tab 2: Output Styling ---
+        // ==========================================
+        var tabStyle = tpanel.add("tab", undefined, "2. Text Style");
+        tabStyle.orientation = "column";
+        tabStyle.alignChildren = ["fill", "top"];
+        tabStyle.spacing = 15;
+        tabStyle.margins = 20;
 
+        tabStyle.add("statictext", undefined, "Font Family:");
+        var allFonts = [];
+        try { allFonts = app.fonts.fontFamilyList; } catch(e) { allFonts = ["Arial", "Tahoma", "Courier"]; }
+        var styleFontDrop = tabStyle.add("dropdownlist", undefined, allFonts);
+        styleFontDrop.selection = 0;
+        for(var f=0; f<allFonts.length; f++) { if(allFonts[f] == "Tahoma") styleFontDrop.selection = f; }
+
+        var styleSizeGrp = tabStyle.add("group");
+        styleSizeGrp.add("statictext", undefined, "Output Font Size:");
+        var styleSizeInput = styleSizeGrp.add("edittext", undefined, "80");
+        styleSizeInput.preferredSize.width = 50;
+
+        tabStyle.add("statictext", undefined, "Paragraph Alignment:");
+        var styleAlignDrop = tabStyle.add("dropdownlist", undefined, ["Right (العربية)", "Center", "Left"]);
+        styleAlignDrop.selection = 0;
+
+        // ==========================================
+        // --- Bottom Controls ---
+        // ==========================================
         var statusLbl = win.add("statictext", undefined, "Status: Ready");
         statusLbl.alignment = ["fill", "bottom"];
 
-        // --- 4. Main Buttons ---
         var btnRun = win.add("button", undefined, "START WHISPER AI");
         btnRun.alignment = ["fill", "bottom"];
+
         var btnApply = win.add("button", undefined, "GENERATE TEXT LAYERS");
         btnApply.alignment = ["fill", "bottom"];
         btnApply.preferredSize.height = 40;
 
+        tpanel.selection = 0;
+        createEditors(20, "");
+
+        // ==========================================
+        // --- Logic & Functions ---
+        // ==========================================
         var whisperDir = "C:\\whisper\\";
         var globalWordData = [];
 
-        // --- وظيفة تحديث التوقيتات ---
         function updateTimings() {
             if (globalWordData.length === 0) return;
             var lines = txtEditor.text.split(/[\r\n]/);
@@ -112,9 +154,7 @@
             for (var i = 0; i < lines.length; i++) {
                 var lineText = lines[i].replace(/^\s+|\s+$/g, "");
                 if (lineText === "") {
-                    fromLines.push("");
-                    toLines.push("");
-                    durLines.push("");
+                    fromLines.push(""); toLines.push(""); durLines.push("");
                     continue;
                 }
 
@@ -140,28 +180,17 @@
             durEditor.text = durLines.join("\n");
         }
 
-        // --- وظيفة تحديث الخط ---
         function forceFontUpdate() {
             var newSize = parseInt(zoomInput.text, 10);
             if (isNaN(newSize) || newSize <= 0) newSize = 20;
             var savedText = txtEditor.text;
-
-            try {
-                var f = ScriptUI.newFont("Tahoma", "REGULAR", newSize);
-                win.graphics.font = f;
-            } catch(e) {}
-
             createEditors(newSize, savedText);
             updateTimings();
-
-            try {
-                txtEditor.active = true;
-            } catch(e) {}
+            try { txtEditor.active = true; } catch(e) {}
         }
 
         zoomInput.onChange = forceFontUpdate;
 
-        // --- Logic Functions ---
         function loadData(file) {
             file.open("r");
             var content = file.read();
@@ -201,23 +230,55 @@
             system.callSystem("cmd.exe /c \"" + py + "\"");
             var f = new File(whisperDir + "WhisRend.json");
             if (f.exists) loadData(f);
-            statusLbl.text = "AI Done (" + selectedModel + ")!";
+            statusLbl.text = "AI Done!";
         };
 
         btnApply.onClick = function() {
-            if (txtEditor.text === "" || globalWordData.length === 0) return;
+            if (txtEditor.text === "" || globalWordData.length === 0) return alert("No data to apply");
+
+            var comp = app.project.activeItem;
+            if (!comp) return alert("Select Comp");
+
             app.beginUndoGroup("Whisper Subs");
+
             var lines = txtEditor.text.split("\n");
             var idx = 0;
-            var comp = app.project.activeItem;
+
+            var chosenFont = styleFontDrop.selection.text;
+            var fontSize = parseInt(styleSizeInput.text, 10);
+            if (isNaN(fontSize)) fontSize = 80;
+            var alignIdx = styleAlignDrop.selection.index;
+
             for (var l = 0; l < lines.length; l++) {
                 var s = lines[l].replace(/^\s+|\s+$/g, "");
                 if (s == "") continue;
+
                 var count = s.split(/\s+/).length;
                 if (idx + count > globalWordData.length) count = globalWordData.length - idx;
+
                 var layer = comp.layers.addText(s);
                 layer.inPoint = globalWordData[idx].start;
                 layer.outPoint = globalWordData[idx + count - 1].end;
+
+                // --- Apply Styling ---
+                var textProp = layer.property("Source Text");
+                var textDoc = textProp.value;
+                textDoc.fontSize = fontSize;
+                try { textDoc.font = chosenFont; } catch(e) {}
+
+                if (alignIdx === 0) {
+                    textDoc.justification = ParagraphJustification.RIGHT_JUSTIFY;
+                } else if (alignIdx === 1) {
+                    textDoc.justification = ParagraphJustification.CENTER_JUSTIFY;
+                } else {
+                    textDoc.justification = ParagraphJustification.LEFT_JUSTIFY;
+                }
+
+                textProp.setValue(textDoc);
+
+                // Force RTL Support expression
+                layer.sourceText.expression = "value";
+
                 idx += count;
             }
             app.endUndoGroup();
