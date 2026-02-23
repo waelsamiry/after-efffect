@@ -2,6 +2,10 @@
     function buildWhisperUI(thisObj) {
         var win = (thisObj instanceof Panel) ? thisObj : new Window("palette", "Whisper Master PRO", undefined, {resizeable: true});
 
+        var whisperDir = "C:\\whisper\\";
+        var globalWordData = [];
+        var fromEditor, toEditor, durEditor, txtEditor;
+
         win.orientation = "column";
         win.alignChildren = ["fill", "fill"];
         win.spacing = 10;
@@ -55,8 +59,6 @@
         editorGroup.alignChildren = ["fill", "fill"];
         editorGroup.alignment = ["fill", "fill"];
         editorGroup.spacing = 5;
-
-        var fromEditor, toEditor, durEditor, txtEditor;
 
         function createEditors(fontSize, content) {
             if (fromEditor) editorGroup.remove(fromEditor);
@@ -142,8 +144,6 @@
         // ==========================================
         // --- Logic & Functions ---
         // ==========================================
-        var whisperDir = "C:\\whisper\\";
-        var globalWordData = [];
 
         function updateTimings() {
             if (globalWordData.length === 0) return;
@@ -224,6 +224,7 @@
         };
 
         btnRun.onClick = function() {
+            if (!modelDropdown.selection) return alert("Please select a model");
             var selectedModel = modelDropdown.selection.text;
             statusLbl.text = "Processing AI (" + selectedModel + ")...";
             var py = "python \"" + whisperDir + "run_whisper.py\" \"" + whisperDir + "WhisRend.wav\" " + selectedModel + " ar";
@@ -244,10 +245,10 @@
             var lines = txtEditor.text.split("\n");
             var idx = 0;
 
-            var chosenFont = styleFontDrop.selection.text;
+            var chosenFont = styleFontDrop.selection ? styleFontDrop.selection.text : "Tahoma";
             var fontSize = parseInt(styleSizeInput.text, 10);
             if (isNaN(fontSize)) fontSize = 80;
-            var alignIdx = styleAlignDrop.selection.index;
+            var alignIdx = styleAlignDrop.selection ? styleAlignDrop.selection.index : 0;
 
             for (var l = 0; l < lines.length; l++) {
                 var s = lines[l].replace(/^\s+|\s+$/g, "");
