@@ -9,7 +9,7 @@
         var fromEditor, toEditor, durEditor, txtEditor;
 
         win.orientation = "column";
-        win.alignChildren = ["fill", "top"]; // Changed to top to allow tpanel to fill space
+        win.alignChildren = ["fill", "fill"];
         win.spacing = 10;
         win.margins = 15;
 
@@ -21,24 +21,37 @@
         // ==========================================
         var tabEditor = tpanel.add("tab", undefined, "1. AI & Editor");
         tabEditor.orientation = "column";
-        tabEditor.alignChildren = ["fill", "top"]; // Changed to top to allow editorGroup to fill space
+        tabEditor.alignChildren = ["fill", "fill"];
         tabEditor.spacing = 10;
 
         // مجموعة الإعدادات العلوية (ثابتة في الأعلى)
         var topGrp = tabEditor.add("group");
-        topGrp.orientation = "column";
-        topGrp.alignChildren = ["fill", "top"];
+        topGrp.orientation = "row";
+        topGrp.alignChildren = ["fill", "center"];
         topGrp.alignment = ["fill", "top"];
+        topGrp.spacing = 20;
 
-        var settingsGrp = topGrp.add("group");
-        settingsGrp.spacing = 10;
-        var btnSetup = settingsGrp.add("button", undefined, "Setup Render");
-        var btnLoad = settingsGrp.add("button", undefined, "Load JSON");
-        settingsGrp.add("statictext", undefined, "Model:");
-        var modelDropdown = settingsGrp.add("dropdownlist", undefined, ["tiny", "base", "small", "medium", "large"]);
+        var btnSetup = topGrp.add("button", undefined, "Setup Render");
+        btnSetup.alignment = ["fill", "center"];
+        var btnLoad = topGrp.add("button", undefined, "Load JSON");
+        btnLoad.alignment = ["fill", "center"];
+
+        var modelGrp = topGrp.add("group");
+        modelGrp.alignment = ["fill", "center"];
+        modelGrp.add("statictext", undefined, "Model:");
+        var modelDropdown = modelGrp.add("dropdownlist", undefined, ["tiny", "base", "small", "medium", "large"]);
         modelDropdown.selection = 1;
+        modelDropdown.alignment = ["fill", "center"];
 
-        var fontGrp = topGrp.add("group");
+        var headerGrp = tabEditor.add("group");
+        headerGrp.orientation = "row";
+        headerGrp.spacing = 5;
+        headerGrp.alignment = ["fill", "top"];
+
+        var hTitle = headerGrp.add("statictext", undefined, "Transcript Text (Editable)");
+        hTitle.alignment = ["fill", "center"];
+
+        var fontGrp = headerGrp.add("group");
         fontGrp.add("statictext", undefined, "UI Font Size:");
         var zoomInput = fontGrp.add("edittext", undefined, "20");
         zoomInput.preferredSize.width = 40;
@@ -53,12 +66,6 @@
             }
         };
 
-        var headerGrp = tabEditor.add("group"); // Changed parent to tabEditor to keep it aligned with editorGroup
-        headerGrp.orientation = "row";
-        headerGrp.spacing = 5;
-        headerGrp.alignment = ["fill", "top"];
-        var hTitle = headerGrp.add("statictext", undefined, "Transcript Text (Editable)");
-        hTitle.alignment = ["fill", "center"];
         var hTimingsGrp = headerGrp.add("group");
         hTimingsGrp.spacing = 5;
 
@@ -140,10 +147,19 @@
         bottomGrp.spacing = 5;
 
         var statusLbl = bottomGrp.add("statictext", undefined, "Status: Ready");
-        var btnRun = bottomGrp.add("button", undefined, "START WHISPER AI");
-        btnRun.preferredSize.height = 35;
-        var btnApply = bottomGrp.add("button", undefined, "GENERATE TEXT LAYERS");
+
+        var botBtnGrp = bottomGrp.add("group");
+        botBtnGrp.orientation = "row";
+        botBtnGrp.alignChildren = ["fill", "fill"];
+        botBtnGrp.alignment = ["fill", "bottom"];
+        botBtnGrp.spacing = 10;
+
+        var btnRun = botBtnGrp.add("button", undefined, "START WHISPER AI");
+        btnRun.preferredSize.height = 50;
+        btnRun.alignment = ["fill", "fill"];
+        var btnApply = botBtnGrp.add("button", undefined, "GENERATE TEXT LAYERS");
         btnApply.preferredSize.height = 50;
+        btnApply.alignment = ["fill", "fill"];
 
         // تفعيل الوظائف
         tpanel.selection = 0;
